@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "clientjs": "^0.1.11",
+    "shaka-player": "^2.1.5"
+  }
+}

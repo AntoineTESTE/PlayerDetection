@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title></title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="css/style.css" rel="stylesheet">
+  <script src="client.min.js"></script>
+  <script src="tab.js"></script>
+  <script src="lodash.min.js"></script>
+  <script src="node_modules/shaka-player/third_party/closure/goog/base.js"></script>
+  <script src="node_modules/shaka-player/dist/deps.js"></script>
+  <script src="node_modules/shaka-player/shaka-player.uncompiled.js"></script>
+</head>
+
+<body>
+
+
+  <script>
+    var client = new ClientJS();
+    let browser = client.getBrowser();
+    var browserVersion = client.getBrowserMajorVersion();
+    var OS = client.getOS();
+    var osVersion = client.getOSVersion();
+    var plugins = client.getPlugins();
+    const osv = (client.getOS() + client.getOSVersion());
+    console.log(browser);
+    console.log(OS);
+    console.log(plugins);
+
+
+    var item = (function findForPlayer() {
+      // OS List filtering by client OS
+      const osList = _.filter(Plateforms, ['os', OS]);
+      console.log(osList);
+
+      // Chromium ?
+      browser = plugins.match('Chromium PDF Plugin') ? 'Chromium' : browser;
+      console.log(browser);
+
+      // OS filtering by client browser
+      const browserList = _.filter(osList, function (e) {
+        return e.browser.name === browser;
+      });
+      console.log(browserList);
+
+      // If no browser found in list
+      if (_.isEmpty(browserList)) {
+        const emptyBrowser = {
+          use: 'H264',
+          browser: {
+            name: browser,
+            before: '',
+            after: ''
+          }
+        }
+        browserList.push(emptyBrowser);
+      }
+      console.log(browserList);
+
+
+      // Find the good Item by client browser version
+      const item = _.find(browserList, function (el) {
+        if ((!el.browser.after) && (!el.browser.before)) {
+          return el
+        } else {
+          return browserVersion > el.browser.after && browserVersion < el.browser.before
+        }
+      });
+      console.log(item)
+      return item;
+    }());
+
+
+    switch (item.use) {
+      case 'Flash':
+        initFlash();
+        break;
+      case 'VP9':
+        initVP9();
+        break;
+      default:
+        initH264();
+    }
+
+    // Initialazing Players
+    function initFlash() {
+      console.log('FLASHYFLASH')
+    }
+
+    function initH264() {
+      console.log('HACHEDEUXSIXQUATRE')
+    }
+
+    function initVP9() {
+      console.log('VAYPAYNEUF')
+      // Install built-in polyfills to patch browser incompatibilities.
+      shaka.polyfill.installAll();
+
+      // Check to see if the browser supports the basic APIs Shaka needs.
+      if (shaka.Player.isBrowserSupported()) {
+        // Everything looks good!
+        initShaka();
+      } else {
+        // This browser does not have the minimum set of APIs we need.
+        console.error('Browser not supported!');
+      }
+    }
+
+
+
+
+    // SHAKA PLAYER
+    function initShaka() {
+      // Create a Player instance.
+      var video = document.getElementById('video');
+      var player = new shaka.Player(video);
+
+      // Attach player to the window to make it easy to access in the JS console.
+      window.player = player;
+
+      // Listen for error events.
+      player.addEventListener('error', onErrorEvent);
+
+      // Try to load a manifest.
+      // This is an asynchronous process.
+      player.load(manifestUri).then(function () {
+        // This runs if the asynchronous load is successful.
+        console.log('The video has now been loaded!');
+      }).catch(onError);  // onError is executed if the asynchronous load fails.
+    }
+
+    function onErrorEvent(event) {
+      // Extract the shaka.util.Error object from the event.
+      onError(event.detail);
+    }
+
+    function onError(error) {
+      // Log the error.
+      console.error('Error code', error.code, 'object', error);
+    }
+
+    document.addEventListener('DOMContentLoaded', initShaka);
+  </script>
+
+
+
+</body>
+
+</html>
