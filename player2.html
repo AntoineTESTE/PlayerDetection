@@ -9,9 +9,10 @@
   <script src="client.min.js"></script>
   <script src="tab.js"></script>
   <script src="lodash.min.js"></script>
-  <script src="node_modules/shaka-player/third_party/closure/goog/base.js"></script>
-  <script src="node_modules/shaka-player/dist/deps.js"></script>
-  <script src="node_modules/shaka-player/shaka-player.uncompiled.js"></script>
+  <script type="text/javascript" src="/video/shaka/shaka-player.compiled.js"></script>
+  <script type="text/javascript" src="/plugins/clappr/clappr.min.js"></script>
+  <script type="text/javascript" src="/video/jw/jwplayer.js"></script>
+
 </head>
 
 <body>
@@ -24,15 +25,41 @@
     var OS = client.getOS();
     var osVersion = client.getOSVersion();
     var plugins = client.getPlugins();
-    const osv = (client.getOS() + client.getOSVersion());
-    console.log(browser);
-    console.log(OS);
-    console.log(plugins);
+    var isFlash = client.isFlash()
+    console.log(OS + ' / ' + browser + ' v' + browserVersion);
 
 
-    var item = (function findForPlayer() {
+    // HTML5 supported ?
+    function html5Supported() {
+      var video = document.createElement('video');
+      return video.canPlayType && video.canPlayType('video/mp4').replace(/no/, '');
+    };
+
+
+    var availablePlayers = [];
+    // Flash supported ?
+    if (isFlash) {
+      availablePlayers.push('Flash');
+    }
+    if (html5Supported()) {
+      availablePlayers.push('H264');
+    }
+    availablePlayers.push('VP9');
+
+
+
+    // Prefiltering by supported players
+    const availablePlatforms = _.filter(Plateforms, (platform) => {
+      return _.includes(availablePlayers, platform.use);
+    });
+    console.log(availablePlatforms);
+
+
+
+    // Founding player
+    var foundPlayer = (function findForPlayer() {
       // OS List filtering by client OS
-      const osList = _.filter(Plateforms, ['os', OS]);
+      const osList = _.filter(availablePlatforms, ['os', OS]);
       console.log(osList);
 
       // Chromium ?
@@ -61,19 +88,19 @@
 
 
       // Find the good Item by client browser version
-      const item = _.find(browserList, function (el) {
+      const foundPlayer = _.find(browserList, function (el) {
         if ((!el.browser.after) && (!el.browser.before)) {
           return el
         } else {
           return browserVersion > el.browser.after && browserVersion < el.browser.before
         }
       });
-      console.log(item)
-      return item;
+      console.log(foundPlayer)
+      return foundPlayer.use;
     }());
 
 
-    switch (item.use) {
+    switch (foundPlayer) {
       case 'Flash':
         initFlash();
         break;
@@ -84,17 +111,10 @@
         initH264();
     }
 
-    // Initialazing Players
-    function initFlash() {
-      console.log('FLASHYFLASH')
-    }
 
-    function initH264() {
-      console.log('HACHEDEUXSIXQUATRE')
-    }
 
+    // InitVP9
     function initVP9() {
-      console.log('VAYPAYNEUF')
       // Install built-in polyfills to patch browser incompatibilities.
       shaka.polyfill.installAll();
 
@@ -109,9 +129,6 @@
     }
 
 
-
-
-    // SHAKA PLAYER
     function initShaka() {
       // Create a Player instance.
       var video = document.getElementById('video');
@@ -142,6 +159,66 @@
     }
 
     document.addEventListener('DOMContentLoaded', initShaka);
+
+
+
+
+    // Init FLASH
+    function initFlash() {
+      var player = new Clappr.Player({
+        source: "http://your.video/here.mp4", // to change
+        parentId: "#mediaspace",
+        autoPlay: true,
+        width: "100%",
+        height: "100%"
+      });
+    }
+
+
+    // Init H264
+    function initH264() {
+      jwplayer('mediaspace').setup({
+        'autostart': 'true',
+        'width': '(!--width--)',
+        //'height': '(!--height--)', //uncomment for responsive player
+        'height': finalheight,  //uncomment for IE8/9 support
+        'modes': [
+          {
+            type: 'flash',
+            //src: '/video/jw/player.swf',
+            src: '/video/chat/VideoStreamerFCSubscribe.swf',
+            config: {
+              'provider': 'rtmp',
+              'rtmp.subscribe': 'true',
+              'controlbar.idlehide': 'true',
+              'controlbar.position': 'over',
+              'rtmpbuffer': '10.0',
+              'rtmptbuffer': '10.0',
+              'streamer': 'rtmpt://play.livee.com/2087C7',
+              //'streamer': 'rtmp://video1.livee.com/live',
+              file: "(!--ct:webevent.global.nomflux.hd--)"
+            }
+          },
+          {
+            type: 'html5',
+            config: {
+              'file': '//echls.livee.com/live/(!--ct:webevent.global.nomflux.hd--)/playlist.m3u8'
+            }
+          }
+        ]
+      });
+    }
+
+
+    // Resizing
+    if ((navigator.userAgent.match(/Android/i)) || navigator.userAgent.match(/BlackBerry/i)) {
+      var videotagstart = '<video controls autoplay width=' + mywidth + ' height=' + myheight + ' src="//echls.livee.com/live/(!--ct:webevent.global.nomflux.hd--)/playlist.m3u8">';
+      var videotagend = '</video>';
+      if (navigator.userAgent.match(/Firefox/i)) {
+        videotagstart = ''; videotagend = '';
+      }
+      document.write('<div style="width:100%;">' + videotagstart + '<a href="rtsp://video1.livee.com/live/(!--ct:webevent.global.nomflux.sd--)"><h2>votre mobile/réseau n\'est pas compatible avec cette vidéo live, cliquez ici pour le flux rtsp</h2></a>' + videotagend + '</div>');
+    }
   </script>
 
 
